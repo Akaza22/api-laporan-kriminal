@@ -9,33 +9,50 @@ import {
   getAllReports,
   updateReportStatus,
 } from './report.service';
+import { asyncHandler } from '../../utils/asyncHandler';
+import { AppError } from '../../utils/appError';
 
-export const create = async (req: Request, res: Response) => {
+export const create = asyncHandler(async (req: Request, res: Response) => {
   const data = createReportSchema.parse(req.body);
-  const report = await createReport(req.user!.userId, data);
+
+  if (!req.user) {
+    throw new AppError('Unauthorized', 401);
+  }
+
+  const report = await createReport(req.user.userId, data);
 
   res.status(201).json({
     message: 'Report submitted',
     report,
   });
-};
+});
 
-export const myReports = async (req: Request, res: Response) => {
-  const reports = await getMyReports(req.user!.userId);
-  res.json(reports);
-};
+export const myReports = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new AppError('Unauthorized', 401);
+  }
 
-export const allReports = async (_: Request, res: Response) => {
+  const reports = await getMyReports(req.user.userId);
+
+  res.json({
+    reports,
+  });
+});
+
+export const allReports = asyncHandler(async (_req: Request, res: Response) => {
   const reports = await getAllReports();
-  res.json(reports);
-};
 
-export const updateStatus = async (req: Request, res: Response) => {
+  res.json({
+    reports,
+  });
+});
+
+export const updateStatus = asyncHandler(async (req: Request, res: Response) => {
   const data = updateStatusSchema.parse(req.body);
 
   const reportId = req.params.id;
   if (typeof reportId !== 'string') {
-    return res.status(400).json({ message: 'Invalid report id' });
+    throw new AppError('Invalid report id', 400);
   }
 
   const report = await updateReportStatus(reportId, data.status);
@@ -44,5 +61,4 @@ export const updateStatus = async (req: Request, res: Response) => {
     message: 'Status updated',
     report,
   });
-};
-
+});
