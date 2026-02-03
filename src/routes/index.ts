@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from '../modules/auth/auth.routes';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { adminOnly } from '../middlewares/role.middleware';
 
 const router = Router();
 
@@ -20,5 +21,13 @@ router.get('/me', authMiddleware, (req, res) => {
   });
 });
 
+router.get(
+  '/admin-test',
+  authMiddleware,
+  adminOnly,
+  (_, res) => {
+    res.json({ message: 'Welcome Admin 👑' });
+  }
+);
 
 export default router;
