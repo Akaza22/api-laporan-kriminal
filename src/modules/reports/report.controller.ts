@@ -6,7 +6,7 @@ import {
 import {
   createReport,
   getMyReports,
-  getAllReports,
+  getAllReportsPaginated,
   updateReportStatus,
 } from './report.service';
 import { asyncHandler } from '../../utils/asyncHandler';
@@ -34,18 +34,35 @@ export const myReports = asyncHandler(async (req: Request, res: Response) => {
 
   const reports = await getMyReports(req.user.userId);
 
-  res.json({
-    reports,
-  });
+  res.json({ reports });
 });
 
-export const allReports = asyncHandler(async (_req: Request, res: Response) => {
-  const reports = await getAllReports();
+export const allReports = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user || req.user.role !== 'ADMIN') {
+      throw new AppError('Forbidden', 403);
+    }
 
-  res.json({
-    reports,
-  });
-});
+    const status = req.query.status as string | undefined;
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const result = await getAllReportsPaginated(
+      status,
+      startDate,
+      endDate,
+      page,
+      limit
+    );
+
+    res.json({
+      success: true,
+      ...result,
+    });
+  }
+);
 
 export const updateStatus = asyncHandler(async (req: Request, res: Response) => {
   const data = updateStatusSchema.parse(req.body);

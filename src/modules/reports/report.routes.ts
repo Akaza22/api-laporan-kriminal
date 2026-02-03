@@ -15,7 +15,13 @@ router.post('/', authMiddleware, create);
 router.get('/me', authMiddleware, myReports);
 
 // ADMIN
-router.get('/', authMiddleware, adminOnly, allReports);
+router.get(
+  '/reports',
+  authMiddleware,
+  adminOnly,
+  allReports
+);
+
 router.patch('/:id/status', authMiddleware, adminOnly, updateStatus);
 
 export default router;
