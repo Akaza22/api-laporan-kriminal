@@ -46,6 +46,8 @@ export const allReports = asyncHandler(
     const status = req.query.status as string | undefined;
     const startDate = req.query.startDate as string | undefined;
     const endDate = req.query.endDate as string | undefined;
+    const search = req.query.search as string | undefined;
+
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
 
@@ -53,6 +55,7 @@ export const allReports = asyncHandler(
       status,
       startDate,
       endDate,
+      search,
       page,
       limit
     );

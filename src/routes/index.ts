@@ -4,12 +4,16 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 import { adminOnly } from '../middlewares/role.middleware';
 import reportRoutes from '../modules/reports/report.routes';
 import uploadRoutes from '../modules/uploads/upload.routes';
+import messageRoutes from '../modules/report-messages/message.routes'
+import timelineRoutes from '../modules/report-timeline/timeline.routes'
 
 const router = Router();
 
 router.use('/auth', authRoutes);
 router.use('/reports', reportRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/message', messageRoutes);
+router.use('/timeline', timelineRoutes)
 
 
 router.get('/', (_, res) => {

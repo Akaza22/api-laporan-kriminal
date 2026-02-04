@@ -41,6 +41,7 @@ export const getAllReportsPaginated = async (
   status?: string,
   startDate?: string,
   endDate?: string,
+  search?: string,
   page = 1,
   limit = 10
 ) => {
@@ -64,8 +65,20 @@ export const getAllReportsPaginated = async (
     conditions.push(`created_at <= $${values.length}`);
   }
 
+  if (search) {
+    values.push(`%${search}%`);
+    conditions.push(`
+      (
+        description ILIKE $${values.length}
+        OR address ILIKE $${values.length}
+      )
+    `);
+  }
+
   const whereClause =
-    conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    conditions.length > 0
+      ? `WHERE ${conditions.join(' AND ')}`
+      : '';
 
   // total count
   const countResult = await pool.query(
