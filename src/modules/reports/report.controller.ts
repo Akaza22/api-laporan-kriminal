@@ -8,6 +8,7 @@ import {
   getMyReports,
   getAllReportsPaginated,
   updateReportStatus,
+  getReportDetailById
 } from './report.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { AppError } from '../../utils/appError';
@@ -82,3 +83,24 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
     report,
   });
 });
+
+export const getReportDetail = asyncHandler(
+  async (req: Request, res: Response) => {
+    const id = req.params.id;
+
+    if (typeof id !== 'string') {
+      throw new AppError('Invalid report id', 400);
+    }
+
+    const report = await getReportDetailById(id);
+
+    if (!report) {
+      throw new AppError('Report not found', 404);
+    }
+
+    res.json({
+      status: 'success',
+      data: report,
+    });
+  }
+);

@@ -128,3 +128,42 @@ export const updateReportStatus = async (
   const { rows } = await pool.query(query, [status, reportId]);
   return rows[0];
 };
+
+export const getReportDetailById = async (reportId: string) => {
+  const { rows } = await pool.query(
+    `
+    SELECT
+      r.id,
+      r.category,
+      r.description,
+      r.address,
+      r.latitude,
+      r.longitude,
+      r.status,
+      r.created_at,
+      json_build_object(
+        'full_name', u.full_name
+      ) AS user,
+      COALESCE(
+        json_agg(
+          json_build_object(
+            'id', rm.id,
+            'url', rm.file_url,
+            'type', rm.file_type
+          )
+        ) FILTER (WHERE rm.id IS NOT NULL),
+        '[]'
+      ) AS images
+    FROM reports r
+    JOIN users u ON u.id = r.user_id
+    LEFT JOIN report_media rm ON rm.report_id = r.id
+    WHERE r.id = $1
+    GROUP BY r.id, u.full_name
+    `,
+    [reportId]
+  );
+
+  return rows[0];
+};
+
+

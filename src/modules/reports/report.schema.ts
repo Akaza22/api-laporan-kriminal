@@ -11,7 +11,7 @@ export const createReportSchema = z.object({
 
 export const updateStatusSchema = z.object({
   status: z.enum([
-    'VERIFIED',
+    'SUBMITTED',
     'IN_PROGRESS',
     'ON_HOLD',
     'RESOLVED',

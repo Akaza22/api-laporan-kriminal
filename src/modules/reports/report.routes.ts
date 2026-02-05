@@ -6,6 +6,7 @@ import {
   myReports,
   allReports,
   updateStatus,
+  getReportDetail
 } from './report.controller';
 
 const router = Router();
@@ -20,6 +21,12 @@ router.get(
   authMiddleware,
   adminOnly,
   allReports
+);
+
+router.get(
+  '/:id',
+  authMiddleware,
+  getReportDetail
 );
 
 router.patch('/:id/status', authMiddleware, adminOnly, updateStatus);

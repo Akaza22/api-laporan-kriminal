@@ -1,15 +1,15 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { adminOnly } from '../../middlewares/role.middleware';
-import { getLatestUsers } from './user.controller';
+import { dashboardAnalytics } from './dashboard.controller';
 
 const router = Router();
 
 router.get(
-  '/',
+  '/analytics',
   authMiddleware,
   adminOnly,
-  getLatestUsers
+  dashboardAnalytics
 );
 
 export default router;
