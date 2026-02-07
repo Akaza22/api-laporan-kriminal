@@ -48,3 +48,24 @@ export const getLatestUsersService = async ({
     created_at: user.created_at,
   }));
 };
+
+
+export const getUserById = async (userId: string) => {
+  const { rows } = await pool.query(
+    `
+    SELECT
+      id,
+      full_name,
+      email,
+      phone,
+      role,
+      is_active,
+      created_at
+    FROM users
+    WHERE id = $1
+    `,
+    [userId]
+  );
+
+  return rows[0] || null;
+};
