@@ -57,7 +57,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "seed:users": "ts-node src/seeders/seed-users.ts"
+    "seed:users": "ts-node src/seeders/seed-users.ts",
+    "db:reset": "ts-node src/seeders/db-reset.ts"
   },
   "keywords": [],
   "author": "",

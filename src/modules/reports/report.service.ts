@@ -71,6 +71,8 @@ export const getAllReportsPaginated = async (
       (
         description ILIKE $${values.length}
         OR address ILIKE $${values.length}
+        OR category ILIKE $${values.length}
+        OR address ILIKE $${values.length}
       )
     `);
   }
