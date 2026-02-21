@@ -30,7 +30,7 @@ export const loginUser = async (email: string, password: string) => {
   const query = `
     SELECT id, password_hash, role
     FROM users
-    WHERE email = $1 AND is_active = true
+    WHERE email = $1 AND is_active = true AND deleted_at IS NULL
     LIMIT 1
   `;
 

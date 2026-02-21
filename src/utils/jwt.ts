@@ -8,6 +8,6 @@ export interface JwtPayload {
 
 export const signToken = (payload: JwtPayload) => {
   return jwt.sign(payload, env.jwtSecret, {
-    expiresIn: '1d',
+    expiresIn: '1h',
   });
 };
