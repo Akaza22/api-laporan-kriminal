@@ -8,11 +8,16 @@ import {
   getMyReports,
   getAllReportsPaginated,
   updateReportStatus,
-  getReportDetailById
+  getReportDetailById,
+  claimReport
 } from './report.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { AppError } from '../../utils/appError';
 
+
+/* =====================================================
+   CREATE REPORT (USER)
+===================================================== */
 export const create = asyncHandler(async (req: Request, res: Response) => {
   const data = createReportSchema.parse(req.body);
 
@@ -28,6 +33,10 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+
+/* =====================================================
+   GET MY REPORTS (USER)
+===================================================== */
 export const myReports = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new AppError('Unauthorized', 401);
@@ -38,8 +47,13 @@ export const myReports = asyncHandler(async (req: Request, res: Response) => {
   res.json({ reports });
 });
 
+
+/* =====================================================
+   GET ALL REPORTS (ADMIN - PAGINATED + FILTER CLAIM)
+===================================================== */
 export const allReports = asyncHandler(
   async (req: Request, res: Response) => {
+
     if (!req.user || req.user.role !== 'ADMIN') {
       throw new AppError('Forbidden', 403);
     }
@@ -48,6 +62,7 @@ export const allReports = asyncHandler(
     const startDate = req.query.startDate as string | undefined;
     const endDate = req.query.endDate as string | undefined;
     const search = req.query.search as string | undefined;
+    const assigned = req.query.assigned as 'unclaimed' | 'mine' | undefined;
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -57,6 +72,8 @@ export const allReports = asyncHandler(
       startDate,
       endDate,
       search,
+      assigned,
+      assigned === 'mine' ? req.user.userId : undefined,
       page,
       limit
     );
@@ -68,15 +85,29 @@ export const allReports = asyncHandler(
   }
 );
 
+
+/* =====================================================
+   UPDATE STATUS (ONLY CLAIMING ADMIN)
+===================================================== */
 export const updateStatus = asyncHandler(async (req: Request, res: Response) => {
+
+  if (!req.user || req.user.role !== 'ADMIN') {
+    throw new AppError('Forbidden', 403);
+  }
+
   const data = updateStatusSchema.parse(req.body);
 
   const reportId = req.params.id;
+
   if (typeof reportId !== 'string') {
     throw new AppError('Invalid report id', 400);
   }
 
-  const report = await updateReportStatus(reportId, data.status);
+  const report = await updateReportStatus(
+    reportId,
+    data.status,
+    req.user.userId
+  );
 
   res.json({
     message: 'Status updated',
@@ -84,8 +115,13 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
   });
 });
 
+
+/* =====================================================
+   GET REPORT DETAIL
+===================================================== */
 export const getReportDetail = asyncHandler(
   async (req: Request, res: Response) => {
+
     const id = req.params.id;
 
     if (typeof id !== 'string') {
@@ -102,5 +138,44 @@ export const getReportDetail = asyncHandler(
       status: 'success',
       data: report,
     });
+  }
+);
+
+
+/* =====================================================
+   CLAIM REPORT (ADMIN ONLY)
+===================================================== */
+export const claimReportController = asyncHandler(
+  async (req: Request, res: Response) => {
+
+    if (!req.user || req.user.role !== 'ADMIN') {
+      throw new AppError('Forbidden', 403);
+    }
+
+    const id = req.params.id;
+
+    if (typeof id !== 'string') {
+      throw new AppError('Invalid report id', 400);
+    }
+
+    try {
+      const report = await claimReport(id, req.user.userId);
+
+      res.status(200).json({
+        message: 'Report claimed successfully',
+        data: report,
+      });
+
+    } catch (error: any) {
+
+      if (error.message === 'ALREADY_CLAIMED') {
+        throw new AppError(
+          'Report already claimed by another admin',
+          400
+        );
+      }
+
+      throw error;
+    }
   }
 );

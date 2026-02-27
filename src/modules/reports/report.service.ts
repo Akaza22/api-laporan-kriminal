@@ -1,19 +1,42 @@
 import { pool } from '../../config/db';
 
+/* =====================================================
+   CREATE REPORT (WITH CATEGORY VALIDATION)
+===================================================== */
 export const createReport = async (
   userId: string,
   data: any
 ) => {
+
+  // 🔥 Cek kategori ada & aktif
+  const categoryCheck = await pool.query(
+    `
+    SELECT is_active
+    FROM report_categories
+    WHERE id = $1
+    `,
+    [data.category_id]
+  );
+
+  if (categoryCheck.rowCount === 0) {
+    throw new Error('CATEGORY_NOT_FOUND');
+  }
+
+  if (!categoryCheck.rows[0].is_active) {
+    throw new Error('CATEGORY_INACTIVE');
+  }
+
   const query = `
     INSERT INTO reports
-    (user_id, category, description, latitude, longitude, address, incident_time)
+    (user_id, category_id, description,
+     latitude, longitude, address, incident_time)
     VALUES ($1,$2,$3,$4,$5,$6,$7)
     RETURNING id, status, created_at
   `;
 
   const values = [
     userId,
-    data.category,
+    data.category_id,
     data.description,
     data.latitude,
     data.longitude,
@@ -22,26 +45,45 @@ export const createReport = async (
   ];
 
   const { rows } = await pool.query(query, values);
+
   return rows[0];
 };
 
-export const getMyReports = async (userId: string) => {
-  const query = `
-    SELECT id, category, status, created_at
-    FROM reports
-    WHERE user_id = $1
-    ORDER BY created_at DESC
-  `;
 
-  const { rows } = await pool.query(query, [userId]);
+/* =====================================================
+   GET MY REPORTS (USER)
+===================================================== */
+export const getMyReports = async (userId: string) => {
+  const { rows } = await pool.query(
+    `
+    SELECT
+      r.id,
+      c.name AS category_name,
+      r.description,
+      r.status,
+      r.created_at
+    FROM reports r
+    LEFT JOIN report_categories c ON c.id = r.category_id
+    WHERE r.user_id = $1
+    ORDER BY r.created_at DESC
+    `,
+    [userId]
+  );
+
   return rows;
 };
 
+
+/* =====================================================
+   GET ALL REPORTS (ADMIN - PAGINATED + CATEGORY JOIN)
+===================================================== */
 export const getAllReportsPaginated = async (
   status?: string,
   startDate?: string,
   endDate?: string,
   search?: string,
+  assigned?: 'unclaimed' | 'mine',
+  adminId?: string,
   page = 1,
   limit = 10
 ) => {
@@ -52,29 +94,37 @@ export const getAllReportsPaginated = async (
 
   if (status) {
     values.push(status);
-    conditions.push(`status = $${values.length}`);
+    conditions.push(`r.status = $${values.length}`);
   }
 
   if (startDate) {
     values.push(startDate);
-    conditions.push(`created_at >= $${values.length}`);
+    conditions.push(`r.created_at >= $${values.length}`);
   }
 
   if (endDate) {
     values.push(endDate);
-    conditions.push(`created_at <= $${values.length}`);
+    conditions.push(`r.created_at <= $${values.length}`);
   }
 
   if (search) {
     values.push(`%${search}%`);
     conditions.push(`
       (
-        description ILIKE $${values.length}
-        OR address ILIKE $${values.length}
-        OR category ILIKE $${values.length}
-        OR address ILIKE $${values.length}
+        r.description ILIKE $${values.length}
+        OR r.address ILIKE $${values.length}
+        OR c.name ILIKE $${values.length}
       )
     `);
+  }
+
+  if (assigned === 'unclaimed') {
+    conditions.push(`r.assigned_admin_id IS NULL`);
+  }
+
+  if (assigned === 'mine' && adminId) {
+    values.push(adminId);
+    conditions.push(`r.assigned_admin_id = $${values.length}`);
   }
 
   const whereClause =
@@ -82,25 +132,34 @@ export const getAllReportsPaginated = async (
       ? `WHERE ${conditions.join(' AND ')}`
       : '';
 
-  // total count
+  // COUNT
   const countResult = await pool.query(
     `
     SELECT COUNT(*)::int AS total
-    FROM reports
+    FROM reports r
+    LEFT JOIN report_categories c ON c.id = r.category_id
     ${whereClause}
     `,
     values
   );
 
-  // data
+  // DATA
   values.push(limit, offset);
 
   const dataResult = await pool.query(
     `
-    SELECT *
-    FROM reports
+    SELECT
+      r.id,
+      c.name AS category_name,
+      r.status,
+      r.address,
+      r.created_at,
+      r.assigned_admin_id,
+      r.claimed_at
+    FROM reports r
+    LEFT JOIN report_categories c ON c.id = r.category_id
     ${whereClause}
-    ORDER BY created_at DESC
+    ORDER BY r.created_at DESC
     LIMIT $${values.length - 1}
     OFFSET $${values.length}
     `,
@@ -116,36 +175,94 @@ export const getAllReportsPaginated = async (
   };
 };
 
+
+/* =====================================================
+   CLAIM REPORT (ADMIN)
+===================================================== */
+export const claimReport = async (
+  reportId: string,
+  adminId: string
+) => {
+  const result = await pool.query(
+    `
+    UPDATE reports
+    SET assigned_admin_id = $1,
+        status = 'IN_PROGRESS',
+        claimed_at = NOW()
+    WHERE id = $2
+    AND assigned_admin_id IS NULL
+    RETURNING *;
+    `,
+    [adminId, reportId]
+  );
+
+  if (result.rowCount === 0) {
+    throw new Error('ALREADY_CLAIMED');
+  }
+
+  return result.rows[0];
+};
+
+
+/* =====================================================
+   UPDATE STATUS (ONLY CLAIMING ADMIN)
+===================================================== */
 export const updateReportStatus = async (
   reportId: string,
-  status: string
+  status: string,
+  adminId: string
 ) => {
-  const query = `
+  const result = await pool.query(
+    `
     UPDATE reports
     SET status = $1
     WHERE id = $2
-    RETURNING id, status
-  `;
+    AND assigned_admin_id = $3
+    RETURNING id, status;
+    `,
+    [status, reportId, adminId]
+  );
 
-  const { rows } = await pool.query(query, [status, reportId]);
-  return rows[0];
+  if (result.rowCount === 0) {
+    throw new Error('NOT_ALLOWED');
+  }
+
+  return result.rows[0];
 };
 
+
+/* =====================================================
+   GET REPORT DETAIL (FULL JOIN CATEGORY)
+===================================================== */
 export const getReportDetailById = async (reportId: string) => {
   const { rows } = await pool.query(
     `
     SELECT
       r.id,
-      r.category,
       r.description,
       r.address,
       r.latitude,
       r.longitude,
       r.status,
       r.created_at,
+      r.assigned_admin_id,
+      r.claimed_at,
+
       json_build_object(
+        'id', c.id,
+        'name', c.name
+      ) AS category,
+
+      json_build_object(
+        'id', u.id,
         'full_name', u.full_name
       ) AS user,
+
+      json_build_object(
+        'id', admin.id,
+        'full_name', admin.full_name
+      ) AS assigned_admin,
+
       COALESCE(
         json_agg(
           json_build_object(
@@ -156,16 +273,17 @@ export const getReportDetailById = async (reportId: string) => {
         ) FILTER (WHERE rm.id IS NOT NULL),
         '[]'
       ) AS images
+
     FROM reports r
     JOIN users u ON u.id = r.user_id
+    LEFT JOIN users admin ON admin.id = r.assigned_admin_id
+    LEFT JOIN report_categories c ON c.id = r.category_id
     LEFT JOIN report_media rm ON rm.report_id = r.id
     WHERE r.id = $1
-    GROUP BY r.id, u.full_name
+    GROUP BY r.id, u.id, admin.id, c.id
     `,
     [reportId]
   );
 
   return rows[0];
 };
-
-

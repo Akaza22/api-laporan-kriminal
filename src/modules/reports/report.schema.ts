@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
 export const createReportSchema = z.object({
-  category: z.string().min(3),
-  description: z.string().min(10),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-  address: z.string().optional(),
-  incident_time: z.string().optional(), // ISO string
+  category_id: z.string().uuid(),
+  description: z.string().min(3),
+  latitude: z.number(),
+  longitude: z.number(),
+  address: z.string(),
+  incident_time: z.string(),
 });
 
 export const updateStatusSchema = z.object({

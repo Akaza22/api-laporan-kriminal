@@ -8,6 +8,7 @@ import messageRoutes from '../modules/report-messages/message.routes'
 import timelineRoutes from '../modules/report-timeline/timeline.routes'
 import dashboardRoutes from '../modules/dashboard/dashboard.routes';
 import userRoutes from "../modules/users/user.routes"
+import categoryRoutes from '../modules/report-category/category.routes';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.use('/message', messageRoutes);
 router.use('/timeline', timelineRoutes)
 router.use('/admin/dashboard', dashboardRoutes)
 router.use('/users', userRoutes)
+router.use('/categories', categoryRoutes)
 
 
 router.get('/', (_, res) => {

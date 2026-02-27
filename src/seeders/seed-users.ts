@@ -8,16 +8,32 @@ const seedUsers = async () => {
     // ===== DATA SEED =====
     const users = [
       {
-        full_name: 'Default User',
-        email: 'user@test.com',
-        password: 'user123',
-        role: 'USER',
-      },
-      {
-        full_name: 'System Admin',
-        email: 'admin@test.com',
+        full_name: 'admin 1',
+        email: 'admin1@test.com',
         password: 'admin123',
         role: 'ADMIN',
+        phone: '081234567890',
+      },
+      {
+        full_name: 'admin 2',
+        email: 'admin2@test.com',
+        password: 'admin123',
+        role: 'ADMIN',
+        phone: '081234567899',
+      },
+      {
+        full_name: 'user 1',
+        email: 'user1@test.com',
+        password: 'user123',
+        role: 'USER',
+        phone: '081234567891',
+      },
+      {
+        full_name: 'user 2',
+        email: 'user2@test.com',
+        password: 'user123',
+        role: 'USER',
+        phone: '081234567892',
       },
     ];
 

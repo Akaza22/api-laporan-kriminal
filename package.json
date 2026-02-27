@@ -58,7 +58,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed:users": "ts-node src/seeders/seed-users.ts",
-    "db:reset": "ts-node src/seeders/db-reset.ts"
+    "db:reset": "ts-node src/seeders/db-reset.ts",
+    "clear:reports": "ts-node src/seeders/clearReports.ts"
   },
   "keywords": [],
   "author": "",

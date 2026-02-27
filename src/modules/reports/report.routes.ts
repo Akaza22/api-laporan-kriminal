@@ -6,7 +6,8 @@ import {
   myReports,
   allReports,
   updateStatus,
-  getReportDetail
+  getReportDetail,
+  claimReportController
 } from './report.controller';
 
 const router = Router();
@@ -30,5 +31,12 @@ router.get(
 );
 
 router.patch('/:id/status', authMiddleware, adminOnly, updateStatus);
+
+router.patch(
+  '/:id/claim',
+  authMiddleware,
+  adminOnly,
+  claimReportController
+);
 
 export default router;
