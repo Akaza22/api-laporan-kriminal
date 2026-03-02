@@ -1,6 +1,7 @@
     import { pool } from '../../config/db';
 import { hashPassword, comparePassword } from '../../utils/password';
 import { signToken } from '../../utils/jwt';
+import bcrypt from 'bcrypt';
 
 export const registerUser = async (
   full_name: string,
@@ -48,4 +49,55 @@ export const loginUser = async (email: string, password: string) => {
   });
 
   return token;
+};
+
+export const changePassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+) => {
+  const { rows } = await pool.query(
+    `
+    SELECT password_hash
+    FROM users
+    WHERE id = $1
+    AND deleted_at IS NULL
+    `,
+    [userId]
+  );
+
+  if (rows.length === 0) {
+    throw new Error('USER_NOT_FOUND');
+  }
+
+  const hashedPassword = rows[0].password_hash;
+
+  const isMatch = await bcrypt.compare(currentPassword, hashedPassword);
+
+  if (!isMatch) {
+    throw new Error('INVALID_CURRENT_PASSWORD');
+  }
+
+  const isSamePassword = await bcrypt.compare(newPassword, hashedPassword);
+
+  if (isSamePassword) {
+    throw new Error('PASSWORD_MUST_BE_DIFFERENT');
+  }
+
+  if (newPassword.length < 8) {
+    throw new Error('PASSWORD_TOO_SHORT');
+  }
+
+  const newHashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await pool.query(
+    `
+    UPDATE users
+    SET password_hash = $1
+    WHERE id = $2
+    `,
+    [newHashedPassword, userId]
+  );
+
+  return true;
 };

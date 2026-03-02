@@ -9,6 +9,8 @@ import {
   updateUserRole,
   softDeleteUser,
   restoreUser,
+  getProfile,
+  updateProfile
  } from './user.service';
 import { AppError } from '../../utils/appError';
 
@@ -291,3 +293,59 @@ export const restoreUserController = async (
   }
 };
 
+export const getProfileController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.userId;
+
+    const data = await getProfile(userId);
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const updateProfileController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = req.user.userId;
+    const { full_name, phone } = req.body;
+
+    const data = await updateProfile(userId, { full_name, phone });
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data,
+    });
+  } catch (error: any) {
+    
+
+    if (error.message === 'NO_FIELDS_TO_UPDATE') {
+      return res.status(400).json({
+        success: false,
+        message: 'No fields provided to update',
+      });
+    }
+
+    if (error.message === 'USER_NOT_FOUND') {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Internal Server Error',
+    });
+  }
+};

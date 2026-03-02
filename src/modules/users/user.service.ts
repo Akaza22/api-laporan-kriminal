@@ -166,12 +166,13 @@ export const getUserReports = async (
 ) => {
   const offset = (page - 1) * limit;
 
+  // 🔎 Cek user masih aktif
   const userCheck = await pool.query(
     `
-      SELECT id
-      FROM users
-      WHERE id = $1
-      AND deleted_at IS NULL
+    SELECT id
+    FROM users
+    WHERE id = $1
+    AND deleted_at IS NULL
     `,
     [userId]
   );
@@ -180,27 +181,34 @@ export const getUserReports = async (
     throw new Error('USER_NOT_FOUND');
   }
 
+  // 🔢 Total count (pakai join biar konsisten)
   const countResult = await pool.query(
     `
-      SELECT COUNT(*)::int AS total
-      FROM reports
-      WHERE user_id = $1
+    SELECT COUNT(*)::int AS total
+    FROM reports r
+    WHERE r.user_id = $1
     `,
     [userId]
   );
 
+  // 📄 Data query dengan join kategori
   const dataResult = await pool.query(
     `
-      SELECT
-        id,
-        category,
-        description,
-        status,
-        created_at
-      FROM reports
-      WHERE user_id = $1
-      ORDER BY created_at DESC
-      LIMIT $2 OFFSET $3
+    SELECT
+      r.id,
+      json_build_object(
+        'id', c.id,
+        'name', c.name
+      ) AS category,
+      r.description,
+      r.status,
+      r.created_at
+    FROM reports r
+    LEFT JOIN report_categories c
+      ON c.id = r.category_id
+    WHERE r.user_id = $1
+    ORDER BY r.created_at DESC
+    LIMIT $2 OFFSET $3
     `,
     [userId, limit, offset]
   );
@@ -300,4 +308,73 @@ export const restoreUser = async (userId: string) => {
   return result.rows[0];
 };
 
+export const getProfile = async (userId: string) => {
+  
 
+  const { rows } = await pool.query(
+    `
+    SELECT 
+      id,
+      full_name,
+      email,
+      phone,
+      role,
+      created_at
+    FROM users
+    WHERE id = $1
+    AND deleted_at IS NULL
+    `,
+    [userId]
+  );
+
+
+  if (rows.length === 0) {
+    throw new Error('USER_NOT_FOUND');
+  }
+
+  return rows[0];
+};
+
+export const updateProfile = async (
+  userId: string,
+  payload: { full_name?: string; phone?: string }
+) => {
+  const fields = [];
+  const values = [];
+  let index = 1;
+
+  if (payload.full_name !== undefined) {
+    fields.push(`full_name = $${index}`);
+    values.push(payload.full_name);
+    index++;
+  }
+
+  if (payload.phone !== undefined) {
+    fields.push(`phone = $${index}`);
+    values.push(payload.phone);
+    index++;
+  }
+
+  if (fields.length === 0) {
+    throw new Error('NO_FIELDS_TO_UPDATE');
+  }
+
+  values.push(userId);
+
+  const query = `
+    UPDATE users
+    SET ${fields.join(', ')},
+        updated_at = NOW()
+    WHERE id = $${index}
+    AND deleted_at IS NULL
+    RETURNING id, full_name, email, phone, role, updated_at
+  `;
+
+  const { rowCount, rows } = await pool.query(query, values);
+
+  if (rowCount === 0) {
+    throw new Error('USER_NOT_FOUND');
+  }
+
+  return rows[0];
+};

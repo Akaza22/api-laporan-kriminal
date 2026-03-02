@@ -7,16 +7,31 @@ export const authMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
+  const publicPaths = [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/health'
+  ];
+
+  if (publicPaths.includes(req.originalUrl)) {
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: 'Unauthorized' });
+
+  if (!authHeader) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
 
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, env.jwtSecret);
+    const decoded = jwt.verify(token, env.jwtSecret) as any;
+
     req.user = decoded;
+
     next();
   } catch {
-    res.status(401).json({ message: 'Invalid token' });
+    return res.status(401).json({ message: 'Invalid token' });
   }
 };

@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { adminOnly } from '../../middlewares/role.middleware';
-import { getLatestUsers, getUserDetail, getUsers, getUserReportsController, updateUserStatusController, updateUserRoleController, deleteUserController, restoreUserController } from './user.controller';
+import { getLatestUsers, getUserDetail, getUsers, getUserReportsController, updateUserStatusController, updateUserRoleController, deleteUserController, restoreUserController, getProfileController, updateProfileController } from './user.controller';
 
 const router = Router();
+
+/* =========================
+   SPECIFIC ROUTES FIRST
+========================= */
 
 router.get(
   '/latest',
@@ -13,16 +17,15 @@ router.get(
 );
 
 router.get(
-  '/:id',
+  '/profile',
   authMiddleware,
-  getUserDetail
+  getProfileController
 );
 
-router.get(
-  '/',
+router.patch(
+  '/profile',
   authMiddleware,
-  adminOnly,
-  getUsers
+  updateProfileController
 );
 
 router.get(
@@ -46,6 +49,13 @@ router.patch(
   updateUserRoleController
 );
 
+router.patch(
+  '/:id/restore',
+  authMiddleware,
+  adminOnly,
+  restoreUserController
+);
+
 router.delete(
   '/:id',
   authMiddleware,
@@ -53,10 +63,21 @@ router.delete(
   deleteUserController
 );
 
-router.patch(
-  '/:id/restore', 
+/* =========================
+   GENERIC ROUTES LAST
+========================= */
+
+router.get(
+  '/:id',
+  authMiddleware,
+  getUserDetail
+);
+
+router.get(
+  '/',
   authMiddleware,
   adminOnly,
-  restoreUserController);
+  getUsers
+);
 
 export default router;
